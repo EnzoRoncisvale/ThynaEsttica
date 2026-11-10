@@ -92,8 +92,6 @@ export interface NavMetadata {
 export const NAV_GROUPS: NavGroup[] = [
   { id: "atendimento", label: "Atendimento" },
   { id: "crm", label: "CRM", hub: { href: "/app/crm", label: "Ver tudo em CRM" } },
-  { id: "ia", label: "Agente de IA", hub: { href: "/app/ai", label: "Ver tudo em IA" } },
-  { id: "canais", label: "Canais" },
   { id: "analise", label: "Análise", hub: { href: "/app/analise", label: "Ver tudo em Análise" } },
   {
     id: "organizacao",
@@ -524,263 +522,6 @@ export const NAV_CATALOG = [
     // Tarefas se abrem todo dia. É esse o corte que decide quem fica no menu.
   },
 
-  // ---- Agente de IA — montar, ensinar, acompanhar ----
-  {
-    href: "/app/ai/agents",
-    label: "Agentes",
-    description: "Quem atende por você: instruções, modelo, ferramentas e publicação.",
-    icon: "Robot",
-    group: "ia",
-    section: "Montar o agente",
-    minRole: "manager",
-    sidebar: true,
-  },
-  {
-    href: "/app/ai/followups",
-    label: "Follow-ups",
-    description: "Como o agente retoma uma conversa que esfriou, para nenhuma morrer no silêncio.",
-    icon: "FlowArrow",
-    group: "ia",
-    section: "Montar o agente",
-    minRole: "manager",
-    sidebar: true,
-  },
-  {
-    // Os roteiros de atendimento (#1130, de @vgamkt): perguntas que a IA conduz
-    // durante a conversa. MÓDULO OPCIONAL da instalação, desligado por padrão
-    // (doc 64): a porta só existe onde quem administra o servidor o ligou.
-    //
-    // SEM `sidebar`, pela decisão (d) do doc 48: o menu lateral encheu e ficou
-    // configurável por empresa — o padrão não cresce; a porta mora no hub de IA
-    // e na busca, e quem usa pode pô-la no menu dela.
-    href: "/app/ai/atendimento",
-    label: "Fluxos de atendimento",
-    description: "Perguntas que a IA conduz durante a conversa, com as respostas guardadas na ficha do cliente.",
-    icon: "ListChecks",
-    group: "ia",
-    section: "Montar o agente",
-    minRole: "manager",
-    modulo: "fluxos_atendimento",
-  },
-  {
-    href: "/app/ai/routers",
-    label: "Roteadores",
-    description: "Qual agente pega qual conversa, e quando o humano assume.",
-    icon: "Signpost",
-    group: "ia",
-    section: "Montar o agente",
-    minRole: "manager",
-    // Saiu do sidebar para dar lugar a Casos: roteador se configura poucas
-    // vezes, e o caso pede resposta no mesmo dia. A troca é um-por-um porque o
-    // menu inteiro tem de caber em 900px (e2e `navegacao.spec.ts`).
-  },
-  {
-    href: "/app/ai/credentials",
-    label: "Credenciais",
-    description: "A chave do provedor de IA que os agentes usam para pensar.",
-    icon: "Key",
-    // VOLTOU para "ia"/"Montar o agente" na triagem, e a razão de quem tinha
-    // movido VENCEU em vez de estar errada: quando este PR nasceu, a tela não
-    // aparecia em hub nenhum e só se chegava nela digitando a URL. Depois
-    // disso a main ganhou o hub de IA, que a lista — e `tests/unit/nav-hub`
-    // cobra a entrada ali, inclusive em espanhol. Movê-la para "Sua empresa"
-    // agora tiraria a tela do lugar onde o hub promete que ela está.
-    group: "ia",
-    section: "Montar o agente",
-    minRole: "manager",
-  },
-  {
-    // O sistema chama modelo em 23 lugares e, até esta tela, a escolha vivia
-    // espalhada por três pilhas de código e sete variáveis de ambiente — não
-    // havia onde responder "quem usa IA aqui, e com qual chave?".
-    href: "/app/ai/providers",
-    label: "Provedores",
-    // O "Jev" vem cedo: o ⌘K mostra só o começo da descrição, e a versão
-    // longa cortava antes do nome — quem procurava "jev" achava, mas não via por quê.
-    description: "Ligue o Jev para decisões rápidas e escolha qual inteligência atende cada parte do sistema.",
-    icon: "Plugs",
-    group: "ia",
-    section: "Montar o agente",
-    minRole: "manager",
-    // SEM `sidebar: true`, como as outras nove telas deste grupo. Adicionar as
-    // duas telas novas à sidebar estourou a dobra em 900px — medido pelo e2e
-    // `navegacao.spec.ts`, que existe justamente porque agrupar o menu o faz
-    // crescer. Configurar provedor é tarefa de poucas vezes; o caminho é o hub
-    // "Ver tudo em IA", igual a Credenciais, Conhecimento, Memória e Skills.
-  },
-  {
-    href: "/app/ai/knowledge/sources",
-    label: "Conhecimento",
-    description: "Os materiais que o agente consulta antes de responder sobre o seu negócio.",
-    icon: "BookOpen",
-    group: "ia",
-    section: "Ensinar o agente",
-    minRole: "manager",
-  },
-  {
-    href: "/app/ai/memory",
-    label: "Memória",
-    description: "O que o agente já aprendeu sobre a sua operação e reaproveita.",
-    icon: "Brain",
-    group: "ia",
-    section: "Ensinar o agente",
-    minRole: "manager",
-  },
-  {
-    href: "/app/ai/skills",
-    label: "Skills",
-    description: "As ações que o agente pode executar sozinho durante o atendimento.",
-    icon: "PuzzlePiece",
-    group: "ia",
-    section: "Ensinar o agente",
-    minRole: "manager",
-  },
-  {
-    href: "/app/ai/cases",
-    label: "Casos",
-    description: "Os atendimentos que o agente conduziu, do início ao desfecho.",
-    icon: "ClipboardText",
-    group: "ia",
-    section: "Acompanhar o agente",
-    minRole: "agent",
-    // Uso diário: a IA abre caso quando precisa de uma pessoa e segue
-    // atendendo enquanto espera. Escondido no hub, o caso só era visto por quem
-    // fosse procurar — medido numa loja que vende pelo WhatsApp.
-    sidebar: true,
-    contador: "casos",
-  },
-  {
-    href: "/app/ai/inbox",
-    label: "Alertas",
-    description: "O que a IA encontrou e precisa de uma decisão sua.",
-    icon: "Flag",
-    group: "ia",
-    section: "Acompanhar o agente",
-    // ⚠️ ESTA ENTRADA NÃO TINHA PISO, E POR ISSO OFERECIA UMA PORTA FECHADA.
-    //
-    // Ela não decide só o item do menu: é DELA que
-    // `components/shell/AlertsBell.tsx` e `AvisoDePropostaEmDestaque.tsx` leem
-    // para se mostrar — os dois perguntam se `/app/ai/inbox` está entre os
-    // destinos da interface. Sem `minRole`, a resposta era "sim" para o
-    // `viewer`, e o sino aparecia para quem não alcança a Central. O contador,
-    // então, ficava em ZERO PARA SEMPRE: `useAgentInbox` só consulta quando o
-    // papel alcança a tela (`ai.inbox.view` = `agent`, em
-    // `hooks/auth/AuthProvider.tsx`), e as rotas de `/api/v1/ai/inbox` exigem
-    // `PAPEL_MINIMO_DA_CENTRAL` — recusam o `viewer`. Nada quebrava e nada
-    // avisava: a pessoa via um sino que nunca ia contar nada.
-    //
-    // A régua é a CONSTANTE, nunca o literal "agent": ela é o mesmo piso que
-    // `requireRole(PAPEL_MINIMO_DA_CENTRAL, …)` aplica nas três rotas da
-    // Central e o mesmo que `lib/notifications/push-dos-avisos.ts` usa para o
-    // push. Com o literal aqui, subir (ou descer) o piso da Central reabriria a
-    // porta em silêncio, para todo mundo, sem nenhum teste ficando vermelho.
-    // Quem guarda isso é `components/shell/sino-so-para-quem-alcanca-a-central.test.tsx`.
-    minRole: PAPEL_MINIMO_DA_CENTRAL,
-  },
-  {
-    // "Aviso no WhatsApp", NUNCA "Avisos": a vizinha de cima chama-se "Alertas"
-    // e É a central de avisos — todo o vocabulário interno dela é "aviso"
-    // (POLITICAS_DE_AVISO, REFERENCIAS_DE_AVISO). Duas entradas com a mesma
-    // palavra, na mesma seção, é a tela ficando ilegível para quem não
-    // programa. O rótulo nomeia o CANAL e o destinatário.
-    href: "/app/ai/cases/avisos",
-    label: "Aviso no WhatsApp",
-    description: "Receber no WhatsApp quando o assistente abrir um caso.",
-    icon: "PaperPlaneTilt",
-    group: "ia",
-    section: "Acompanhar o agente",
-    // `admin` porque escolhe um número conectado e manda dado de cliente para um
-    // celular — o mesmo gate da rota e da RLS de `config_aviso_de_caso`.
-    minRole: "admin",
-    // SEM `sidebar`: o grupo IA já tem treze telas e o e2e de navegação exige
-    // que o menu inteiro caiba em 900px de altura. Configurar isto é tarefa de
-    // poucas vezes; o caminho é o hub "Ver tudo em IA".
-  },
-  {
-    // Órfã: nenhum lugar do app linkava para cá. O flywheel gerava propostas de
-    // melhoria do agente e a fila só era vista por quem soubesse a URL.
-    href: "/app/ai/proposals",
-    label: "Propostas",
-    description: "Melhorias que a IA sugere para si mesma, esperando sua decisão.",
-    icon: "Lightbulb",
-    group: "ia",
-    section: "Acompanhar o agente",
-  },
-  {
-    // A tela de Uso responde "quanto gastei". Esta responde a pergunta que não
-    // tinha lugar nenhum: "o agente parou de responder, o que aconteceu?".
-    // Antes da migration 0128 ela seria impossível de construir com honestidade
-    // — llm_calls só registrava sucesso.
-    href: "/app/ai/runs",
-    label: "Execuções",
-    description: "O que a IA fez — e, quando falhou, o que aconteceu e o que fazer.",
-    icon: "ListChecks",
-    group: "ia",
-    section: "Acompanhar o agente",
-    minRole: "manager",
-    // Idem: fora da sidebar para o menu não passar da dobra. Quem vem para cá
-    // está diagnosticando, e chega pelo hub ou pelo link do aviso na Central.
-  },
-  {
-    href: "/app/ai/usage",
-    label: "Uso e orçamento",
-    description: "Quanto a IA consumiu e qual é o teto de gasto do mês.",
-    icon: "Gauge",
-    group: "ia",
-    section: "Acompanhar o agente",
-    minRole: "manager",
-  },
-
-  // ---- Canais — por onde as mensagens entram e saem ----
-  {
-    href: "/app/connections",
-    label: "Conexões",
-    // Cobre os DOIS caminhos desde o PR #105: número por QR e canal oficial da
-    // Meta (com os templates dele), cada um numa aba. A descrição cita "oficial"
-    // e "Meta" de propósito — é por esses nomes que se procura no ⌘K, e a busca
-    // varre a descrição além do rótulo.
-    description:
-      "Seus números de WhatsApp: por QR ou canal oficial da Meta, com saúde, reconexão e templates.",
-    icon: "PlugsConnected",
-    group: "canais",
-    minRole: "admin",
-    sidebar: true,
-    healthDot: true,
-  },
-  {
-    // Não tinha link nenhum no app inteiro: só se chegava digitando a URL.
-    href: "/app/integrations/nuvemshop",
-    label: "Nuvemshop",
-    description: "Conecte a loja para trazer pedidos e clientes para dentro do CRM.",
-    icon: "Storefront",
-    group: "canais",
-    // A página não filtra por papel, mas as Server Actions de conectar e
-    // desconectar exigem admin — mostrar a um viewer seria oferecer botão morto.
-    minRole: "admin",
-    // SEM `sidebar`: fora do menu lateral por decisão do dono do produto — a
-    // integração não é usada nesta instalação e ocupava uma linha de "Canais"
-    // toda vez que alguém abria o app.
-    //
-    // Continua sendo DESTINO, e é por isso que a linha some em vez do bloco
-    // inteiro: `searchable()` (abaixo) filtra só por papel, então a tela segue
-    // no ⌘K; a rota, a página e as Server Actions ficam intactas; e
-    // `tests/unit/navegacao-completude.test.ts` continua vendo uma porta para
-    // `/app/integrations/nuvemshop` — apagar a entrada exigiria justificá-la na
-    // allowlist de "rota sem porta", que é coisa de rota morta, e esta não está.
-    //
-    // ⚠️ O grupo "canais" não tem hub, então o ⌘K passa a ser a ÚNICA porta
-    // navegável. Para voltar a mostrá-la, basta devolver `sidebar: true`.
-  },
-  {
-    href: "/app/webhooks",
-    label: "Webhooks",
-    description: "Avise outros sistemas quando algo acontecer aqui dentro.",
-    icon: "WebhooksLogo",
-    group: "canais",
-    minRole: "manager",
-    sidebar: true,
-  },
-
   // ---- Análise — olhar o sistema funcionando ----
   //
   // ── QUEM FICA NO MENU, E POR QUÊ ─────────────────────────────────────────
@@ -867,22 +608,6 @@ export const NAV_CATALOG = [
     minRole: "manager",
   },
   {
-    // Logo abaixo de Desempenho porque responde a metade da MESMA pergunta: lá
-    // está o que aconteceu depois que a pessoa chegou; aqui, quanto custou
-    // trazê-la. Ler as duas juntas é o que fecha a conta do custo por cliente.
-    href: "/app/ads/meta",
-    label: "Meta Ads",
-    description: "Quanto custou cada resultado das campanhas que trazem gente para cá.",
-    icon: "Megaphone",
-    group: "analise",
-    section: "Os números do período",
-    // `manager`, e não o `viewer` de Desempenho: aqui não há recorte por
-    // pessoa — orçamento e criativo são da empresa inteira. Mesmo grau dos
-    // outros dois vizinhos do grupo.
-    minRole: "manager",
-    sidebar: true,
-  },
-  {
     // Irmã de "Desempenho", não a mesma coisa: lá é DESFECHO (funil agora,
     // ganho/perdido por atendente); aqui é o TRABALHO que aconteceu no
     // período, com quem fez cada coisa. Um mês inteiro atendido pela IA e um
@@ -896,16 +621,6 @@ export const NAV_CATALOG = [
     group: "analise",
     section: "Os números do período",
     sidebar: true,
-  },
-  {
-    // Observabilidade, não configuração: por isso não fica junto dos agentes.
-    href: "/app/ai/evolution",
-    label: "Evolução da IA",
-    description: "Se o agente está melhorando, onde ele erra e o que falta ensinar.",
-    icon: "ChartLineUp",
-    group: "analise",
-    section: "O histórico que se consulta",
-    minRole: "manager",
   },
   {
     href: "/app/audit",
@@ -1044,25 +759,6 @@ export const NAV_CATALOG = [
     // `admin` pelo mesmo critério das vizinhas: o token grava na conta de
     // anúncios da empresa, e quem o troca decide para onde vai o dinheiro de
     // mídia. Um `manager` ficaria acima de billing na mesma prancheta.
-    minRole: "admin",
-  },
-  {
-    // Vizinha de Conversões, e SEPARADA dela de propósito. As duas conectam "a
-    // Meta" e a tentação de fundi-las é real — mas são credenciais de escopos
-    // diferentes, em tabelas diferentes (0214), com consequências opostas
-    // quando vencem: o token de leitura vencido deixa uma tela vazia, o de
-    // conversões vencido faz a empresa parar de reportar vendas sem sintoma.
-    // Uma tela só, com dois campos de token parecidos, é como se cola o token
-    // errado no campo errado e se perde uma semana achando que quebrou.
-    href: "/app/settings/meta-ads",
-    label: "Meta Ads",
-    description: "Conectar a conta de anúncios para ler o desempenho das campanhas.",
-    icon: "Megaphone",
-    group: "organizacao",
-    section: "Sua empresa",
-    // `admin` pelo mesmo critério da vizinha, mesmo o token sendo só de
-    // leitura: ele expõe orçamento e performance da conta inteira, e quem
-    // apenas LÊ a tela (`manager`) não precisa poder trocar a credencial.
     minRole: "admin",
   },
   {
