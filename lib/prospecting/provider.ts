@@ -1,0 +1,157 @@
+import { z } from "zod";
+import type { SearchInput } from "./schema";
+import type { Idioma } from "@/lib/i18n/idiomas";
+
+/**
+ * De QUEM é a falha — e é isso que decide se a campanha inteira para.
+ *
+ * `campanha`  vale para TODOS os candidatos: canal desconectado, agente sem
+ *             versão publicada, configuração inválida. Tentar o próximo daria o
+ *             mesmo erro, então pausar é o certo.
+ * `candidato` vale só para AQUELE: destino incompleto, abordagem cancelada,
+ *             contato que virou bloqueado entre a busca e o envio. Parar a fila
+ *             por causa de um item é o oposto do que a casa faz em todo lugar.
+ */
+export type EscopoDaFalha = "campanha" | "candidato";
+
+export class ProspectingError extends Error {
+  constructor(
+    message: string,
+    public status = 422,
+    /**
+     * O padrão é `campanha` de propósito: falhar FECHADO.
+     *
+     * Um erro que ninguém classificou pode ser sistêmico, e marcar o candidato
+     * e seguir faria a fila repetir a mesma falha mil vezes — com mil linhas de
+     * erro e nenhuma pausa. Pausar uma campanha que podia continuar custa uma
+     * retomada manual; não pausar uma que devia parar custa a lista inteira.
+     */
+    public escopo: EscopoDaFalha = "campanha",
+    /**
+     * O CÓDIGO de wire, quando a recusa é de um TIPO que a tela precisa
+     * distinguir e não só uma frase. Sem código, a rota responde
+     * `prospecting_unavailable` — que é o certo para falha genérica e o errado
+     * para conflito de conexão: o cliente precisa saber que o problema é "esta
+     * conexão já tem campanha" (e qual) para oferecer o caminho, em vez de
+     * tratar como indisponibilidade do provedor.
+     */
+    public codigo?: string,
+    /** Dados de apoio do código (nunca PII: aqui vai id e nome da campanha). */
+    public detalhes?: Record<string, unknown>,
+  ) {
+    super(message);
+  }
+}
+/**
+ * O CANAL SAIU DE `WORKING` POR INSTANTES — reconexão, NÃO defeito de configuração.
+ *
+ * A sessão cai e volta em segundos (a queda de rede é do transporte, não do
+ * operador). O tick lia essa situação pelo mesmo `status !== "WORKING"` que
+ * serve para canal arquivado e para canal que exige modelo aprovado, e lançava
+ * tudo no escopo `campanha` — que é o escopo que o tick usa para PAUSAR a fila.
+ *
+ * Efeito medido (issue #3073): a sessão caiu às 08:14:57 e voltou em segundos;
+ * às 08:15:00 a campanha foi para `paused` com a mensagem de configuração, a
+ * sessão voltou a `WORKING` e a campanha ficou parada até alguém notar — o dia
+ * de envio seguinte foi perdido.
+ *
+ * Aqui a falha é declarada TRANSITÓRIA: o tick ADIA o próximo envio
+ * (`next_send_at`, o mesmo mecanismo que ele já usa para janela fechada, teto
+ * diário e ritmo) em vez de pausar. `retomarEmMs` é curto de propósito — a
+ * sessão costuma voltar antes disso, e um adiamento curto não troca a cadência
+ * da campanha (o intervalo configurado continua valendo no próximo envio).
+ */
+export class CanalReconectandoError extends ProspectingError {
+  constructor(
+    message: string,
+    public retomarEmMs = 60_000,
+  ) {
+    super(message, 409);
+    this.name = "CanalReconectandoError";
+  }
+}
+
+const runSchema = z.object({
+  data: z.object({
+    id: z.string(),
+    status: z.string(),
+    defaultDatasetId: z.string().optional(),
+    usageTotalUsd: z.number().optional(),
+  }),
+});
+const ACTOR = "compass~crawler-google-places";
+/** Provider adapter: same Actor and normalization contract as the existing Maps workflows. */
+export async function providerRequest(key: string, path: string, body?: unknown): Promise<unknown> {
+  let response: Response;
+  try {
+    response = await fetch(`https://api.apify.com/v2/${path}`, {
+      method: body === undefined ? "GET" : "POST",
+      redirect: "error",
+      cache: "no-store",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: AbortSignal.timeout(25000),
+    });
+  } catch {
+    throw new ProspectingError(
+      "O provedor não confirmou a operação. Consulte o histórico antes de repetir uma busca.",
+      502,
+    );
+  }
+  if (!response.ok)
+    throw new ProspectingError(
+      response.status === 401
+        ? "Chave de busca inválida."
+        : response.status === 402
+          ? "Saldo ou limite de uso insuficiente no provedor de busca."
+          : `Busca indisponível (HTTP ${response.status}).`,
+      502,
+    );
+  return response.json();
+}
+/** O que a organização decide sobre a busca, além do formulário (`idioma.ts`). */
+export interface OpcoesDaBusca {
+  /** Idioma em que os dados voltam (rubro, endereço). Ausente = português do Brasil, como antes. */
+  idioma?: Idioma;
+}
+export async function startSearch(key: string, input: SearchInput, opcoes: OpcoesDaBusca = {}) {
+  const idioma = opcoes.idioma ?? "pt-BR";
+  // No retries on POST: an ambiguous timeout must never start another paid run.
+  return runSchema.parse(
+    await providerRequest(
+      key,
+      `acts/${ACTOR}/runs?maxItems=${input.limit}&maxTotalChargeUsd=${input.budget_usd}&timeout=300`,
+      {
+        searchStringsArray: [input.niche],
+        locationQuery: input.location,
+        maxCrawledPlacesPerSearch: input.limit,
+        // Os códigos de idioma do produto são os mesmos do actor (`pt-BR`, `es`, e também os
+        // que ainda não estão visíveis no seletor) — conferido no esquema de entrada dele em
+        // 02/11/2026. O PAÍS só vai fixo para o português do
+        // Brasil, que é o comportamento de sempre; nos outros idiomas quem diz onde buscar é
+        // a `locationQuery` ("Montevideo, Uruguay"), sem um Brasil por cima.
+        language: idioma,
+        ...(idioma === "pt-BR" ? { countryCode: "br" } : {}),
+        skipClosedPlaces: true,
+        scrapeContacts: input.enrich,
+        maxReviews: 0,
+        maxImages: 0,
+        maximumLeadsEnrichmentRecords: 0,
+      },
+    ),
+  ).data;
+}
+export async function readSearch(key: string, id: string) {
+  return runSchema.parse(await providerRequest(key, `actor-runs/${encodeURIComponent(id)}`)).data;
+}
+export async function readResults(key: string, dataset: string, limit: number) {
+  return z
+    .array(z.record(z.string(), z.unknown()))
+    .max(100)
+    .parse(
+      await providerRequest(
+        key,
+        `datasets/${encodeURIComponent(dataset)}/items?clean=true&limit=${limit}`,
+      ),
+    );
+}
