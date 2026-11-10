@@ -46,33 +46,5 @@ export function VersionFooter({
       )}
     </p>
   );
-  if (!alerta) return instalada;
-
-  const novo = data.latest_version?.replace(/^v/i, "") ?? "";
-  return (
-    <div>
-      {instalada}
-      <Link
-        href="/app/settings/atualizacao"
-        onClick={onNavigate}
-        title={`${t("Nova versão")} ${novo} ${t("disponível")}`}
-        className={cn(
-          "flex items-center gap-2 rounded-md px-3 py-2 text-xs text-foreground hover:bg-accent/50",
-          collapsed && "justify-center px-2",
-        )}
-      >
-        <span className="relative flex h-2 w-2 shrink-0">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/60" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-        </span>
-        {!collapsed && (
-          <span className="truncate">
-            {t("Nova versão")}
-            {novo ? ` · ${novo}` : ""}
-          </span>
-        )}
-        {collapsed && <ArrowCircleUp size={16} aria-hidden />}
-      </Link>
-    </div>
-  );
+  return instalada;
 }

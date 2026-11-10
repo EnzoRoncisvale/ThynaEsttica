@@ -1,7 +1,5 @@
-import { CallsClient } from "./_client";
-
-export const dynamic = "force-dynamic";
+import { notFound } from "next/navigation";
 
 export default function CallsPage() {
-  return <CallsClient />;
+  notFound();
 }

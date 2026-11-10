@@ -302,7 +302,7 @@ const DO_SERVIDOR: RecursoOpcional[] = [
     padrao: "desligado",
     quemDecide: "dono_do_servidor",
     href: null,
-    comoLigar: "No arquivo de ambiente, WACALLS_API_BASE_URL e WACALLS_API_TOKEN, e voz em COMPOSE_PROFILES.",
+    comoLigar: "No arquivo de ambiente, configure WACALLS_API_BASE_URL e WACALLS_API_TOKEN.",
     ler: peloServidor("voz_whatsapp"),
   },
   {
@@ -332,7 +332,7 @@ const DO_SERVIDOR: RecursoOpcional[] = [
     padrao: "desligado",
     quemDecide: "dono_do_servidor",
     href: null,
-    comoLigar: "No servidor, telefonia em COMPOSE_PROFILES e os arquivos do Asterisk. Este app não enxerga isso.",
+    comoLigar: "Disponível apenas em instalações com suporte a servidor SIP próprio.",
     ler: () => "nao_verificado",
   },
   {
@@ -365,7 +365,7 @@ const DO_SERVIDOR: RecursoOpcional[] = [
     padrao: "ligado",
     quemDecide: "dono_do_servidor",
     href: null,
-    comoLigar: "Nasce pronto pelo kit de instalação, mas só funciona em endereço com https (em http://IP nenhum navegador entrega o aviso com o sistema fechado). Se aparecer desligado, rode no servidor: bash hostgator-setup-kit/update.sh",
+    comoLigar: "Funciona em qualquer domínio com HTTPS configurado e as chaves VAPID presentes nas variáveis de ambiente.",
     ler: peloServidor("web_push"),
   },
   {

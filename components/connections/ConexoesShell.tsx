@@ -98,14 +98,8 @@ export function ConexoesShell({
             ele reprova igual. */}
         <TabsTrigger value="numeros">{t("Números por QR")}</TabsTrigger>
         <TabsTrigger value="oficial">{t("API Oficial (Meta)")}</TabsTrigger>
-        {/* "Provedor parceiro" e não a marca: o rótulo da marca vem do servidor
-            (`lib/channels/connect`), porque a tela não pode nomear provider — e
-            porque no dia em que houver um segundo parceiro esta aba não muda.
-            Aqui fica o CONCEITO; lá dentro o cartão diz de quem se trata. */}
         <TabsTrigger value="parceiro">{t("Provedor parceiro")}</TabsTrigger>
-        <TabsTrigger value="telefonia">{t("Telefone")}</TabsTrigger>
         <TabsTrigger value="sociais">{t("Redes sociais")}</TabsTrigger>
-        <TabsTrigger value="voz">{t("Chamada de voz")}</TabsTrigger>
         {graphParceiro && <TabsTrigger value="graph">{graphParceiro.label}</TabsTrigger>}
       </TabsList>
 
@@ -113,14 +107,7 @@ export function ConexoesShell({
         <ConnectionsClient wahaConfigured={wahaConfigured} />
       </TabsContent>
 
-      <TabsContent value="telefonia" className="mt-0">
-        <TelefoniaClient />
-      </TabsContent>
       <TabsContent value="sociais" className="mt-0"><RedesSociaisClient /></TabsContent>
-
-      <TabsContent value="voz" className="mt-0">
-        <CanalVozClient wacallsConfigured={wacallsConfigured} />
-      </TabsContent>
 
       {graphParceiro && (
         <TabsContent value="graph" className="mt-0">

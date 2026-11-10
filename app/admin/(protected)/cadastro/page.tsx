@@ -73,50 +73,25 @@ export default async function Page() {
           className="rounded-md border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm dark:border-amber-500/30 dark:bg-amber-950/20"
         >
           <p className="font-medium">
-            {traduzir("A troca de modo ainda não chegou ao servidor.", usuario.idioma)}
+            {traduzir("A troca de modo precisa ser ajustada no Supabase.", usuario.idioma)}
           </p>
-          {kitSincroniza ? (
-            <>
-              <p className="mt-1">
-                {traduzir(
-                  "A troca só vale para o cadastro direto depois da próxima atualização do servidor: o CRM já segue o modo novo, mas o GoTrue da VPS continua com o modo anterior. Esta tela só avisa — nada é corrigido aqui.",
+          <p className="mt-1">
+            {traduzir(
+              "O CRM já segue o modo novo, mas o Supabase precisa ser alinhado nas configurações de Authentication.",
+              usuario.idioma,
+            )}
+          </p>
+          <p className="mt-2">
+            {modo === "so_convite"
+              ? traduzir(
+                  'No painel do Supabase, em Authentication → Sign In / Up, desligue "Allow new users to sign up".',
+                  usuario.idioma,
+                )
+              : traduzir(
+                  'No painel do Supabase, em Authentication → Sign In / Up, ligue "Allow new users to sign up".',
                   usuario.idioma,
                 )}
-              </p>
-              <p className="mt-2">
-                {traduzir("Para aplicar agora, rode isto na VPS:", usuario.idioma)}
-              </p>
-              <code className="mt-1 block overflow-x-auto rounded-md bg-muted px-3 py-2 font-mono text-xs">
-                bash hostgator-setup-kit/update.sh
-              </code>
-            </>
-          ) : (
-            <>
-              <p className="mt-1">
-                {traduzir(
-                  "Com o Supabase separado, o cadastro direto não acompanha a troca sozinho: o CRM já segue o modo novo, mas o Supabase continua com o modo anterior. Esta tela só avisa — nada é corrigido aqui.",
-                  usuario.idioma,
-                )}
-              </p>
-              <p className="mt-2">
-                {modo === "so_convite"
-                  ? traduzir(
-                      'No painel do Supabase, em Authentication → Sign In / Up, desligue "Allow new users to sign up".',
-                      usuario.idioma,
-                    )
-                  : traduzir(
-                      'No painel do Supabase, em Authentication → Sign In / Up, ligue "Allow new users to sign up".',
-                      usuario.idioma,
-                    )}
-              </p>
-              <p className="mt-2">
-                {traduzir("Em GoTrue próprio, a chave equivalente é:", usuario.idioma)}
-              </p>
-              <code className="mt-1 block overflow-x-auto rounded-md bg-muted px-3 py-2 font-mono text-xs">
-                DISABLE_SIGNUP={alvoDoGoTrue}
-              </code>
-            </>
-          )}
+          </p>
         </div>
       )}
       <FormularioDeCadastro modoInicial={modo} />

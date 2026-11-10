@@ -319,55 +319,7 @@ export const NAV_CATALOG = [
     group: "crm",
     section: "O dia a dia da venda",
   },
-  {
-    // Módulo VoIP (migration 0347). No grupo do CRM pelo mesmo critério de
-    // Tarefas: quem atende confere ligações perdidas e transcrições no dia a
-    // dia, não como revisão deliberada.
-    //
-    // ─── MÓDULO OPCIONAL: só aparece com a telefonia ligada PARA A ORGANIZAÇÃO ─
-    //
-    // O dono decidiu (doc 27) que a telefonia por SIP entra desligada por
-    // padrão — quem não liga não tem os contêineres, não tem tronco e não tem
-    // ligação nenhuma para ver.
-    //
-    // Até a #1290 este item aparecia para todo mundo e levava a uma tela vazia:
-    // o menu oferecia uma porta que não funcionava. Hoje ele declara
-    // `capacidade: "telefonia"` e o filtro de `permitidos()` o esconde de quem
-    // não tem o módulo em uso. A decisão sai de `capacidades_ligadas`, a MESMA
-    // lista que já governa Propostas — não há uma segunda régua para a
-    // telefonia: `lib/telefonia/em-uso.ts` responde "esta organização salvou o
-    // tronco?", e `capacidadesLigadas()` soma essa resposta à lista.
-    //
-    // Por que o sinal é o tronco, e não o profile do compose: "telefonia
-    // ligada" na INSTALAÇÃO é `COMPOSE_PROFILES` no servidor, que o aplicativo
-    // não lê (`lib/recursos-opcionais/catalogo.ts`, `telefonia_sip`:
-    // `ler: () => "nao_verificado"`). O tronco é o primeiro estado que a
-    // organização produz e que o app enxerga; sem ele não há chamada possível.
-    // Efeito colateral aceito e declarado: instalação com o profile de pé e
-    // nenhum tronco salvo não mostra o item — a tela, vazia, não faria falta, e
-    // o tronco se cadastra em `/app/settings/voip-trunk`, não aqui.
-    //
-    // SEGUE FORA DO SIDEBAR, e isso é independente do filtro: o menu de 900px
-    // (`tests/e2e/navegacao.spec.ts:222`) cabe com 19 itens e rola com o
-    // vigésimo. A porta vive no hub do grupo CRM ("Ver tudo em CRM") e no ⌘K —
-    // os dois passam pela mesma projeção, então o item some dos dois quando a
-    // telefonia está desligada, e a navegação direta por URL continua
-    // respondendo como sempre (esconder do menu nunca foi autorização).
-    //
-    // ADMINISTRADOR DA INSTALAÇÃO não tem exceção aqui, e isso também é medição,
-    // não escolha nova: `permitidos()` aplica `modulo`/`capacidade` DEPOIS de
-    // `canSee()`, então platform admin já não vê porta de capacidade desligada
-    // hoje (ver `tests/unit/navegacao-registry.test.ts`). Bypass só existe para
-    // PAPEL (`canSee`), que é outra pergunta.
-    href: "/app/calls",
-    label: "Chamadas",
-    description: "Histórico de ligações (voz por IA) com transcrição.",
-    icon: "Phone",
-    group: "crm",
-    section: "O dia a dia da venda",
-    minRole: "manager",
-    capacidade: "telefonia",
-  },
+
   {
     // Fila de ligações sobre um funil próprio. A régua está em lib/cold-call/regras.ts.
     href: "/app/cold-call",
@@ -1157,15 +1109,7 @@ export const NAV_CATALOG = [
     section: "Dados e acesso",
     minRole: "admin",
   },
-  {
-    href: "/app/settings/voip-trunk",
-    label: "Trunk SIP",
-    description: "Credenciais do provedor SIP para chamadas de voz por IA.",
-    icon: "Phone",
-    group: "organizacao",
-    section: "Dados e acesso",
-    minRole: "admin",
-  },
+
   {
     // A porta do cadastro do servidor MCP externo (#2948). Em "Dados e acesso"
     // pela MESMA razão de API Tokens e Dados externos: é o eixo "por onde dado
