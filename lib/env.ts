@@ -91,6 +91,11 @@ const diasDeRetencao = (nome: string, padrao: number) =>
     });
 
 const schema = z.object({
+  LANDING_SUPABASE_PROJECT_REF: z.string().default(""),
+  LANDING_ORGANIZATION_ID: z.string().default(""),
+  LANDING_PIPELINE_ID: z.string().default(""),
+  LANDING_STAGE_ID: z.string().default(""),
+  LANDING_COMPANY_WHATSAPP: z.string().default(""),
   // Node
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 

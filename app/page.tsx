@@ -576,9 +576,6 @@ export default function HomePage() {
           <a href="#sobre">O Espaço</a>
           <a href="#contato">Agendamento</a>
         </div>
-        <Link href="/login" className="honey-nav__cta">
-          Acesso Equipe →
-        </Link>
       </nav>
 
       {/* 3D BEE CANVAS (Three.js) */}
@@ -609,7 +606,7 @@ export default function HomePage() {
             </p>
             <a className="join" href="#estetica">
               <i>
-                <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6">
+                <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth={1.6}>
                   <path d="M3 1l4 4-4 4" />
                 </svg>
               </i>
@@ -639,7 +636,7 @@ export default function HomePage() {
             </p>
             <Link className="join reveal d3" href="/estetica">
               <i>
-                <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6">
+                <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth={1.6}>
                   <path d="M3 1l4 4-4 4" />
                 </svg>
               </i>
@@ -662,7 +659,7 @@ export default function HomePage() {
             </p>
             <Link className="join reveal d3" href="/saude">
               <i>
-                <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6">
+                <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth={1.6}>
                   <path d="M3 1l4 4-4 4" />
                 </svg>
               </i>
@@ -700,7 +697,7 @@ export default function HomePage() {
             </p>
             <a className="join reveal d3" href="#contato">
               <i>
-                <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6">
+                <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth={1.6}>
                   <path d="M3 1l4 4-4 4" />
                 </svg>
               </i>
@@ -725,7 +722,7 @@ export default function HomePage() {
             >
               <Link className="join" href="/estetica">
                 <i>
-                  <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth={1.6}>
                     <path d="M3 1l4 4-4 4" />
                   </svg>
                 </i>
@@ -733,7 +730,7 @@ export default function HomePage() {
               </Link>
               <Link className="join" href="/saude">
                 <i>
-                  <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth={1.6}>
                     <path d="M3 1l4 4-4 4" />
                   </svg>
                 </i>
@@ -751,7 +748,6 @@ export default function HomePage() {
             <div>
               <Link href="/estetica">Protocolos Estéticos</Link>
               <Link href="/saude">Consultas de Saúde</Link>
-              <Link href="/login">Painel Equipe (CRM)</Link>
             </div>
             <div>
               <a href="https://instagram.com" target="_blank" rel="noopener noreferrer">

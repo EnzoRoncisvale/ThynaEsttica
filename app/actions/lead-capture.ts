@@ -1,6 +1,13 @@
 "use server";
 
+import { createHash, randomUUID } from "node:crypto";
+import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { env } from "@/lib/env";
+import { audit } from "@/lib/audit";
+import { logger } from "@/lib/logger";
+import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
+import { formularioPublicoSchema } from "@/lib/leads/formulario-publico";
 
 export interface LeadCaptureInput {
   name: string;
@@ -13,113 +20,120 @@ export interface LeadCaptureInput {
   notes?: string;
 }
 
-const ORG_ID = "56e0f251-8248-409e-8d90-e6cff7232257";
-const PIPELINE_ID = "a4d190c7-38af-497f-9625-dea2e65ee48a";
-const STAGE_ID = "f5586240-0bca-48e5-8758-e672bfaaf665"; // 1. Novo Lead (Site / WhatsApp)
+export async function submitLeadCapture(raw: LeadCaptureInput) {
+  const parsed = formularioPublicoSchema.safeParse(raw);
+  if (!parsed.success)
+    return { success: false, error: "Confira seu nome, telefone com DDD e os demais campos." };
+  const input = parsed.data;
+  const requestId = randomUUID();
+  const organizationId = env.LANDING_ORGANIZATION_ID;
+  const pipelineId = env.LANDING_PIPELINE_ID;
+  const stageId = env.LANDING_STAGE_ID;
+  const companyPhone = env.LANDING_COMPANY_WHATSAPP.replace(/\D/g, "");
 
-export async function submitLeadCapture(input: LeadCaptureInput) {
+  // Nunca usar o banco ou os IDs de outra instalacao.
+  if (
+    !env.LANDING_SUPABASE_PROJECT_REF ||
+    new URL(env.NEXT_PUBLIC_SUPABASE_URL).hostname !==
+      `${env.LANDING_SUPABASE_PROJECT_REF}.supabase.co` ||
+    ![organizationId, pipelineId, stageId].every((id) => z.uuid().safeParse(id).success) ||
+    !/^55[1-9]\d{9,10}$/.test(companyPhone) ||
+    (env.SUPABASE_SERVER_URL && env.SUPABASE_SERVER_URL !== env.NEXT_PUBLIC_SUPABASE_URL)
+  ) {
+    return {
+      success: false,
+      error: "O formulário está temporariamente indisponível. Tente novamente mais tarde.",
+    };
+  }
   try {
-    const supabase = createAdminClient();
-
-    // Normalizar telefone
-    const rawDigits = input.phone.replace(/\D/g, "");
-    let cleanPhone = rawDigits;
-    if (rawDigits.length >= 10 && rawDigits.length <= 11 && !rawDigits.startsWith("55")) {
-      cleanPhone = `55${rawDigits}`;
-    }
-
-    const nicheLabel = input.niche === "estetica" ? "Estética" : "Saúde";
-
-    // 1. Procurar ou criar contato
-    const e164Phone = `+${cleanPhone}`;
-    let contactId: string | null = null;
-    const { data: existingContact } = await supabase
-      .from("contacts")
-      .select("id, tags")
-      .eq("organization_id", ORG_ID)
-      .eq("phone_number", e164Phone)
+    const bucket = createHash("sha256").update(`${organizationId}:${input.phone}`).digest("hex");
+    const rate = await checkRateLimit(`landing:${bucket}`, 3, 600);
+    const total = await checkRateLimit(`landing:${organizationId}`, 60, 60);
+    if (!rate.allowed || !total.allowed)
+      return { success: false, error: "Muitas tentativas. Aguarde alguns minutos." };
+    const db = createAdminClient();
+    const { data: stage, error: stageError } = await db
+      .from("crm_stages")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .eq("pipeline_id", pipelineId)
+      .eq("id", stageId)
       .maybeSingle();
-
-    if (existingContact) {
-      contactId = existingContact.id;
-      const currentTags = Array.isArray(existingContact.tags) ? existingContact.tags : [];
-      const updatedTags = Array.from(new Set([...currentTags, nicheLabel, input.selectedService]));
-      await supabase
-        .from("contacts")
-        .update({
-          name: input.name,
-          email: input.email || undefined,
-          tags: updatedTags,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", contactId);
-    } else {
-      const { data: newContact, error: cErr } = await supabase
+    if (stageError || !stage) throw new Error("invalid_destination");
+    const phone = `+${input.phone}`;
+    const { data: existing, error: lookupError } = await db
+      .from("contacts")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .eq("phone_number", phone)
+      .maybeSingle();
+    if (lookupError) throw new Error("contact_lookup_failed");
+    let contactId = existing?.id;
+    // Captura publica nao pode sobrescrever o cadastro de cliente existente.
+    if (!contactId) {
+      const { data: contact, error } = await db
         .from("contacts")
         .insert({
-          organization_id: ORG_ID,
+          organization_id: organizationId,
           name: input.name,
-          phone_number: e164Phone,
-          phone_whatsapp: "sim",
+          phone_number: phone,
           email: input.email || null,
           source: "website",
-          tags: [nicheLabel, input.selectedService],
+          tags: [input.niche],
         })
         .select("id")
         .single();
-
-      if (!cErr && newContact) {
-        contactId = newContact.id;
-      }
+      if (error || !contact) throw new Error("contact_insert_failed");
+      contactId = contact.id;
+      void audit({
+        action: "contact.created",
+        organizationId,
+        resourceType: "contact",
+        resourceId: contactId,
+        requestId,
+        bypassedRls: true,
+      });
     }
-
-    // 2. Criar Lead no Kanban
-    const title = `[${nicheLabel}] ${input.selectedService} - ${input.name}`;
-    const descParts = [
-      `Nome: ${input.name}`,
-      `WhatsApp: ${input.phone}`,
-      input.email ? `E-mail: ${input.email}` : null,
-      `Área: ${nicheLabel}`,
-      `Procedimento / Serviço: ${input.selectedService}`,
-      input.preferredDay || input.preferredTime
-        ? `Preferência: ${input.preferredDay || ""} às ${input.preferredTime || ""}`
-        : null,
-      input.notes ? `Observações / Queixa: ${input.notes}` : null,
-      `Data de captação: ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}`,
-    ].filter(Boolean);
-
-    await supabase.from("crm_leads").insert({
-      organization_id: ORG_ID,
-      pipeline_id: PIPELINE_ID,
-      stage_id: STAGE_ID,
-      contact_id: contactId,
-      title,
-      description: descParts.join("\n"),
-      source: "website",
-      status: "open",
-      position_in_stage: 0,
+    const description = [
+      `Solicitação do site: ${input.name}`,
+      `Serviço: ${input.selectedService}`,
+      `Preferência (a confirmar): ${input.preferredDay || "Não informada"} ${input.preferredTime || ""}`,
+      input.notes || "",
+    ].join("\n");
+    const { data: lead, error } = await db
+      .from("crm_leads")
+      .insert({
+        organization_id: organizationId,
+        pipeline_id: pipelineId,
+        stage_id: stageId,
+        contact_id: contactId,
+        title: `${input.selectedService} - ${input.name}`,
+        description,
+        source: "website",
+        status: "open",
+        position_in_stage: 0,
+      })
+      .select("id")
+      .single();
+    if (error || !lead) throw new Error("lead_insert_failed");
+    void audit({
+      action: "lead.created",
+      organizationId,
+      resourceType: "lead",
+      resourceId: lead.id,
+      requestId,
+      bypassedRls: true,
     });
-
-    // 3. Montar link do WhatsApp para atendimento imediato
-    const companyPhone = process.env.NEXT_PUBLIC_COMPANY_WHATSAPP || "5561999999999";
-    const cleanCompanyPhone = companyPhone.replace(/\D/g, "");
-
-    let message = "";
-    if (input.niche === "estetica") {
-      message = `Olá Thyná! Me chamo *${input.name}* e gostaria de agendar o protocolo *${input.selectedService}*${
-        input.preferredDay ? ` para ${input.preferredDay} às ${input.preferredTime || "14:00"}` : ""
-      }.${input.notes ? `\n\nObservação: ${input.notes}` : ""}`;
-    } else {
-      message = `Olá Thyná! Me chamo *${input.name}* e gostaria de agendar uma consulta de *${input.selectedService}*${
-        input.preferredDay ? ` para ${input.preferredDay} às ${input.preferredTime || "14:00"}` : ""
-      }.${input.notes ? `\n\nDetalhes/Objetivo: ${input.notes}` : ""}`;
-    }
-
-    const whatsappUrl = `https://wa.me/${cleanCompanyPhone}?text=${encodeURIComponent(message)}`;
-
-    return { success: true, whatsappUrl };
-  } catch (err: any) {
-    console.error("Erro no submitLeadCapture:", err);
-    return { success: false, error: err?.message || "Falha ao registrar contato" };
+    const message = `Olá! Sou ${input.name}. Gostaria de solicitar ${input.selectedService} para ${input.preferredDay || "um dia a combinar"}, às ${input.preferredTime || "um horário a combinar"}. Aguardo confirmação.`;
+    return {
+      success: true,
+      whatsappUrl: `https://wa.me/${companyPhone}?text=${encodeURIComponent(message)}`,
+    };
+  } catch {
+    logger.error("Falha na captura pública de lead", { requestId });
+    return {
+      success: false,
+      error: "Não foi possível concluir sua solicitação. Tente novamente mais tarde.",
+    };
   }
 }

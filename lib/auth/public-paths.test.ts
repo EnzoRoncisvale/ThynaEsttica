@@ -9,6 +9,14 @@ import { describe, it, expect } from "vitest";
 import { isPublicPath } from "@/lib/auth/public-paths";
 
 describe("isPublicPath", () => {
+  it("libera a página inicial e as landing pages públicas de nicho", () => {
+    expect(isPublicPath("/")).toBe(true);
+    expect(isPublicPath("/estetica")).toBe(true);
+    expect(isPublicPath("/saude")).toBe(true);
+    expect(isPublicPath("/estetica/sub")).toBe(false);
+    expect(isPublicPath("/saude/sub")).toBe(false);
+  });
+
   it("libera o heartbeat do agente do host (bearer, sem cookie)", () => {
     expect(isPublicPath("/api/v1/system/agent")).toBe(true);
   });

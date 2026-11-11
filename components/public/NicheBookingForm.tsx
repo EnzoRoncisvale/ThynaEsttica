@@ -5,16 +5,11 @@ import {
   Calendar,
   Clock,
   CheckCircle2,
-  Phone,
   ArrowRight,
-  ShieldCheck,
   Star,
   Check,
-  ChevronRight,
   ArrowLeft,
   MessageSquare,
-  Sparkles,
-  HeartPulse,
 } from "lucide-react";
 import { submitLeadCapture } from "@/app/actions/lead-capture";
 
@@ -69,6 +64,7 @@ export default function NicheBookingForm({ niche, services }: NicheBookingProps)
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -95,7 +91,7 @@ export default function NicheBookingForm({ niche, services }: NicheBookingProps)
       d.setDate(today.getDate() + i);
       if (d.getDay() === 0) continue; // Pula domingo
 
-      const iso = d.toISOString().slice(0, 10);
+      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       days.push({
         iso,
         weekday: i === 0 ? "Hoje" : i === 1 ? "Amanhã" : weekdays[d.getDay()]!,
@@ -113,97 +109,102 @@ export default function NicheBookingForm({ niche, services }: NicheBookingProps)
   const selectedDayObj = availableDays.find((d) => d.iso === selectedDayIso);
 
   const handleStartBooking = (service: ServiceItem) => {
+    setSubmitError(null);
+    setWhatsappUrl(null);
     setSelectedService(service);
     setStep(1);
   };
 
   const handleFinish = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedService || !name || !phone) return;
+    if (isSubmitting || !selectedService || !name || !phone) return;
 
     setIsSubmitting(true);
+    setSubmitError(null);
     const dayLabel = selectedDayObj
       ? `${selectedDayObj.weekday}, ${selectedDayObj.dayNumber} de ${selectedDayObj.monthName}`
       : selectedDayIso;
 
-    const res = await submitLeadCapture({
-      name,
-      phone,
-      email,
-      niche,
-      selectedService: selectedService.title,
-      preferredDay: dayLabel,
-      preferredTime: selectedTime,
-      notes,
-    });
+    try {
+      const res = await submitLeadCapture({
+        name,
+        phone,
+        email,
+        niche,
+        selectedService: selectedService.title,
+        preferredDay: dayLabel,
+        preferredTime: selectedTime,
+        notes,
+      });
 
-    setIsSubmitting(false);
-
-    if (res.success && res.whatsappUrl) {
-      setWhatsappUrl(res.whatsappUrl);
-      setStep(3);
-      // Opcional: abre o WhatsApp imediatamente em nova aba
-      if (typeof window !== "undefined") {
-        window.open(res.whatsappUrl, "_blank");
+      if (res.success && res.whatsappUrl) {
+        setWhatsappUrl(res.whatsappUrl);
+        setStep(3);
+      } else {
+        setSubmitError(res.error || "Não foi possível registrar sua solicitação.");
       }
+    } catch {
+      setSubmitError("Falha de conexão. Tente novamente.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="w-full">
       {/* Vitrine de Serviços / Protocolos */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+      <div className="grid grid-cols-1 gap-6 pt-4 md:grid-cols-3">
         {services.map((item) => (
           <div
             key={item.id}
-            className={`relative rounded-3xl p-6 transition-all duration-300 flex flex-col justify-between ${
+            className={`relative flex flex-col justify-between rounded-3xl p-6 transition-all duration-300 ${
               item.highlight
-                ? "bg-white border-2 border-[#FFC107] shadow-xl shadow-[#FFC107]/10"
-                : "bg-white/80 border border-zinc-200/90 hover:border-[#FFC107]/80 hover:shadow-lg"
+                ? "border-2 border-[#FFC107] bg-white shadow-xl shadow-[#FFC107]/10"
+                : "border border-zinc-200/90 bg-white/80 hover:border-[#FFC107]/80 hover:shadow-lg"
             }`}
           >
             {item.highlight && (
-              <span className="absolute -top-3 left-6 px-3 py-1 bg-[#FFC107] text-black font-extrabold text-[11px] rounded-full shadow-sm">
+              <span className="absolute -top-3 left-6 rounded-full bg-[#FFC107] px-3 py-1 text-[11px] font-extrabold text-black shadow-sm">
                 {item.tag}
               </span>
             )}
 
             <div className="space-y-4">
               {!item.highlight && (
-                <span className="inline-block px-3 py-1 bg-amber-50 text-amber-900 border border-amber-200/70 font-bold text-[11px] rounded-full">
+                <span className="inline-block rounded-full border border-amber-200/70 bg-amber-50 px-3 py-1 text-[11px] font-bold text-amber-900">
                   {item.tag}
                 </span>
               )}
 
               <div>
-                <h3 className="text-lg font-black text-zinc-950 tracking-tight leading-snug">
+                <h3 className="text-lg leading-snug font-black tracking-tight text-zinc-950">
                   {item.title}
                 </h3>
-                <p className="text-xs text-zinc-500 mt-1 leading-relaxed">{item.subtitle}</p>
+                <p className="mt-1 text-xs leading-relaxed text-zinc-500">{item.subtitle}</p>
               </div>
 
               {/* Duração & Avaliação */}
-              <div className="flex items-center gap-4 text-xs font-semibold text-zinc-500 py-2 border-y border-zinc-100">
+              <div className="flex items-center gap-4 border-y border-zinc-100 py-2 text-xs font-semibold text-zinc-500">
                 <div className="flex items-center gap-1 text-amber-600">
-                  <Star className="w-3.5 h-3.5 fill-[#FFC107] text-[#FFC107]" />
+                  <Star className="h-3.5 w-3.5 fill-[#FFC107] text-[#FFC107]" />
                   <span className="font-bold">{item.rating}</span>
-                  <span className="text-zinc-400 font-normal">({item.reviewsCount})</span>
+                  <span className="font-normal text-zinc-400">({item.reviewsCount})</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-zinc-400" />
+                  <Clock className="h-3.5 w-3.5 text-zinc-400" />
                   <span>{item.durationTotal}</span>
                 </div>
               </div>
 
               {/* Itens Inclusos */}
               <div className="space-y-2 pt-1">
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-zinc-400 block">
+                <span className="block text-[11px] font-extrabold tracking-wider text-zinc-400 uppercase">
                   O que está incluso:
                 </span>
                 <ul className="space-y-1.5 text-xs text-zinc-700">
                   {item.includedItems.map((inc, i) => (
                     <li key={i} className="flex items-start gap-2">
-                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5 stroke-[2.5]" />
+                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 stroke-[2.5] text-emerald-600" />
                       <span className="leading-tight">{inc}</span>
                     </li>
                   ))}
@@ -212,9 +213,9 @@ export default function NicheBookingForm({ niche, services }: NicheBookingProps)
 
               {/* Bônus */}
               {item.exclusiveBonuses.length > 0 && (
-                <div className="p-3 bg-amber-50/70 border border-amber-200/60 rounded-2xl text-[11px] text-amber-950 space-y-1">
+                <div className="space-y-1 rounded-2xl border border-amber-200/60 bg-amber-50/70 p-3 text-[11px] text-amber-950">
                   {item.exclusiveBonuses.map((b, i) => (
-                    <div key={i} className="font-semibold leading-snug">
+                    <div key={i} className="leading-snug font-semibold">
                       {b}
                     </div>
                   ))}
@@ -223,9 +224,9 @@ export default function NicheBookingForm({ niche, services }: NicheBookingProps)
             </div>
 
             {/* Preço e Botão */}
-            <div className="pt-6 border-t border-zinc-100 mt-6 space-y-3">
+            <div className="mt-6 space-y-3 border-t border-zinc-100 pt-6">
               <div>
-                <span className="text-[11px] line-through text-zinc-400 block">
+                <span className="block text-[11px] text-zinc-400 line-through">
                   De R$ {item.priceOriginal.toFixed(2).replace(".", ",")}
                 </span>
                 <div className="flex items-baseline gap-1.5">
@@ -240,10 +241,10 @@ export default function NicheBookingForm({ niche, services }: NicheBookingProps)
 
               <button
                 onClick={() => handleStartBooking(item)}
-                className="w-full py-3 bg-[#FFC107] hover:bg-[#ffb300] active:scale-[0.98] text-black font-extrabold text-xs rounded-2xl shadow-md shadow-[#FFC107]/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-2xl bg-[#FFC107] py-3 text-xs font-extrabold text-black shadow-md shadow-[#FFC107]/20 transition-all hover:bg-[#ffb300] active:scale-[0.98]"
               >
                 <span>Reservar Horário</span>
-                <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                <ArrowRight className="h-3.5 w-3.5 stroke-[2.5]" />
               </button>
             </div>
           </div>
@@ -252,16 +253,16 @@ export default function NicheBookingForm({ niche, services }: NicheBookingProps)
 
       {/* MODAL DE AGENDAMENTO & CAPTURA */}
       {selectedService && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative max-h-[92vh] overflow-y-auto">
+        <div className="animate-in fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs duration-200">
+          <div className="relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl sm:p-8">
             {/* Header Modal */}
-            <div className="flex items-center justify-between pb-4 border-b border-zinc-100 mb-5">
+            <div className="mb-5 flex items-center justify-between border-b border-zinc-100 pb-4">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-[#FFF8E7] text-[#FFC107] flex items-center justify-center font-bold text-sm">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#FFF8E7] text-sm font-bold text-[#FFC107]">
                   🐝
                 </div>
                 <div>
-                  <h4 className="text-sm font-black text-zinc-950 leading-tight">
+                  <h4 className="text-sm leading-tight font-black text-zinc-950">
                     Agendamento • Thyná Estética
                   </h4>
                   <p className="text-[11px] text-zinc-400">
@@ -271,7 +272,7 @@ export default function NicheBookingForm({ niche, services }: NicheBookingProps)
               </div>
               <button
                 onClick={() => setSelectedService(null)}
-                className="w-8 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500 flex items-center justify-center text-sm font-bold cursor-pointer"
+                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-zinc-100 text-sm font-bold text-zinc-500 hover:bg-zinc-200"
               >
                 ✕
               </button>
@@ -281,24 +282,27 @@ export default function NicheBookingForm({ niche, services }: NicheBookingProps)
             {step === 1 && (
               <div className="space-y-5">
                 <div>
-                  <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider block mb-1">
+                  <span className="mb-1 block text-[11px] font-bold tracking-wider text-amber-700 uppercase">
                     Protocolo Selecionado:
                   </span>
-                  <div className="p-3 bg-zinc-50 border border-zinc-200/80 rounded-2xl">
-                    <h5 className="font-extrabold text-sm text-zinc-900">{selectedService.title}</h5>
-                    <p className="text-xs text-emerald-700 font-bold mt-0.5">
-                      R$ {selectedService.pricePromo.toFixed(2).replace(".", ",")} ({selectedService.installments})
+                  <div className="rounded-2xl border border-zinc-200/80 bg-zinc-50 p-3">
+                    <h5 className="text-sm font-extrabold text-zinc-900">
+                      {selectedService.title}
+                    </h5>
+                    <p className="mt-0.5 text-xs font-bold text-emerald-700">
+                      R$ {selectedService.pricePromo.toFixed(2).replace(".", ",")} (
+                      {selectedService.installments})
                     </p>
                   </div>
                 </div>
 
                 {/* Seletor de Dias */}
                 <div>
-                  <label className="text-xs font-extrabold text-zinc-800 block mb-2 flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-zinc-500" />
+                  <label className="mb-2 block flex items-center gap-1.5 text-xs font-extrabold text-zinc-800">
+                    <Calendar className="h-3.5 w-3.5 text-zinc-500" />
                     <span>Escolha o melhor dia:</span>
                   </label>
-                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+                  <div className="flex scrollbar-none gap-2 overflow-x-auto pb-2">
                     {availableDays.map((d) => {
                       const isSel = d.iso === selectedDayIso;
                       return (
@@ -306,19 +310,19 @@ export default function NicheBookingForm({ niche, services }: NicheBookingProps)
                           key={d.iso}
                           type="button"
                           onClick={() => setSelectedDayIso(d.iso)}
-                          className={`p-2.5 rounded-2xl min-w-[70px] text-center border transition-all cursor-pointer ${
+                          className={`min-w-[70px] cursor-pointer rounded-2xl border p-2.5 text-center transition-all ${
                             isSel
-                              ? "bg-[#111111] text-white border-[#111111] shadow-md"
-                              : "bg-zinc-50 text-zinc-700 border-zinc-200 hover:border-zinc-300"
+                              ? "border-[#111111] bg-[#111111] text-white shadow-md"
+                              : "border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-zinc-300"
                           }`}
                         >
-                          <span className="text-[10px] uppercase font-bold block opacity-70">
+                          <span className="block text-[10px] font-bold uppercase opacity-70">
                             {d.weekday}
                           </span>
-                          <span className="text-lg font-black block leading-none my-1">
+                          <span className="my-1 block text-lg leading-none font-black">
                             {d.dayNumber}
                           </span>
-                          <span className="text-[9px] block opacity-60">{d.monthName}</span>
+                          <span className="block text-[9px] opacity-60">{d.monthName}</span>
                         </button>
                       );
                     })}
@@ -327,11 +331,11 @@ export default function NicheBookingForm({ niche, services }: NicheBookingProps)
 
                 {/* Seletor de Horários */}
                 <div>
-                  <label className="text-xs font-extrabold text-zinc-800 block mb-2 flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-zinc-500" />
+                  <label className="mb-2 block flex items-center gap-1.5 text-xs font-extrabold text-zinc-800">
+                    <Clock className="h-3.5 w-3.5 text-zinc-500" />
                     <span>Horário preferido:</span>
                   </label>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                     {TIME_SLOTS.map((slot) => {
                       const isSel = slot === selectedTime;
                       return (
@@ -339,10 +343,10 @@ export default function NicheBookingForm({ niche, services }: NicheBookingProps)
                           key={slot}
                           type="button"
                           onClick={() => setSelectedTime(slot)}
-                          className={`py-2 px-3 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                          className={`cursor-pointer rounded-xl border px-3 py-2 text-xs font-bold transition-all ${
                             isSel
-                              ? "bg-[#FFC107] text-black border-[#FFC107] shadow-xs font-extrabold"
-                              : "bg-zinc-50 text-zinc-700 border-zinc-200 hover:border-zinc-300"
+                              ? "border-[#FFC107] bg-[#FFC107] font-extrabold text-black shadow-xs"
+                              : "border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-zinc-300"
                           }`}
                         >
                           {slot}
@@ -363,10 +367,10 @@ export default function NicheBookingForm({ niche, services }: NicheBookingProps)
                   <button
                     type="button"
                     onClick={() => setStep(2)}
-                    className="px-6 py-2.5 bg-[#FFC107] hover:bg-[#ffb300] text-black font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                    className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-[#FFC107] px-6 py-2.5 text-xs font-extrabold text-black shadow-md transition-all hover:bg-[#ffb300]"
                   >
                     <span>Continuar</span>
-                    <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <ArrowRight className="h-3.5 w-3.5 stroke-[2.5]" />
                   </button>
                 </div>
               </div>
@@ -375,9 +379,17 @@ export default function NicheBookingForm({ niche, services }: NicheBookingProps)
             {/* PASSO 2: DADOS DE CONTATO & DETALHES */}
             {step === 2 && (
               <form onSubmit={handleFinish} className="space-y-4">
+                <p className="text-xs text-zinc-600">
+                  O dia e o horário são preferências e dependem de confirmação da equipe.
+                </p>
+                {submitError && (
+                  <p role="alert" className="text-sm text-red-700">
+                    {submitError}
+                  </p>
+                )}
                 <div className="space-y-3 text-xs">
                   <div>
-                    <label className="block font-extrabold text-zinc-800 mb-1">
+                    <label className="mb-1 block font-extrabold text-zinc-800">
                       Seu Nome Completo *
                     </label>
                     <input
@@ -386,12 +398,12 @@ export default function NicheBookingForm({ niche, services }: NicheBookingProps)
                       placeholder="Ex: Beatriz Ramos"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FFC107]"
+                      className="w-full rounded-xl border border-zinc-200 bg-zinc-50 p-3 focus:ring-2 focus:ring-[#FFC107] focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-extrabold text-zinc-800 mb-1">
+                    <label className="mb-1 block font-extrabold text-zinc-800">
                       Seu WhatsApp *
                     </label>
                     <input
@@ -400,15 +412,15 @@ export default function NicheBookingForm({ niche, services }: NicheBookingProps)
                       placeholder="(61) 98765-4321"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FFC107]"
+                      className="w-full rounded-xl border border-zinc-200 bg-zinc-50 p-3 focus:ring-2 focus:ring-[#FFC107] focus:outline-none"
                     />
-                    <span className="text-[10px] text-zinc-400 mt-1 block">
+                    <span className="mt-1 block text-[10px] text-zinc-400">
                       Usaremos para confirmar seu horário e enviar a localização da clínica.
                     </span>
                   </div>
 
                   <div>
-                    <label className="block font-extrabold text-zinc-800 mb-1">
+                    <label className="mb-1 block font-extrabold text-zinc-800">
                       E-mail (opcional)
                     </label>
                     <input
@@ -416,12 +428,12 @@ export default function NicheBookingForm({ niche, services }: NicheBookingProps)
                       placeholder="beatriz@exemplo.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FFC107]"
+                      className="w-full rounded-xl border border-zinc-200 bg-zinc-50 p-3 focus:ring-2 focus:ring-[#FFC107] focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-extrabold text-zinc-800 mb-1">
+                    <label className="mb-1 block font-extrabold text-zinc-800">
                       {niche === "estetica"
                         ? "Dúvidas ou queixas sobre sua pele/corpo:"
                         : "Sintomas, queixas ou objetivo principal:"}
@@ -435,15 +447,15 @@ export default function NicheBookingForm({ niche, services }: NicheBookingProps)
                       }
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FFC107]"
+                      className="w-full rounded-xl border border-zinc-200 bg-zinc-50 p-3 focus:ring-2 focus:ring-[#FFC107] focus:outline-none"
                     />
                   </div>
                 </div>
 
                 {/* Resumo da Reserva */}
-                <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-2xl text-[11px] text-amber-950 space-y-1">
-                  <div className="font-bold flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-amber-700" />
+                <div className="space-y-1 rounded-2xl border border-amber-200/80 bg-amber-50/70 p-3 text-[11px] text-amber-950">
+                  <div className="flex items-center gap-1.5 font-bold">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-amber-700" />
                     <span>Resumo do Agendamento:</span>
                   </div>
                   <div className="text-zinc-700">
@@ -451,9 +463,9 @@ export default function NicheBookingForm({ niche, services }: NicheBookingProps)
                     {selectedDayObj?.dayNumber} de {selectedDayObj?.monthName} às{" "}
                     <strong>{selectedTime}</strong>.
                   </div>
-                  <div className="text-emerald-700 font-bold">
-                    Investimento: R$ {selectedService.pricePromo.toFixed(2).replace(".", ",")}{" "}
-                    ({selectedService.installments}).
+                  <div className="font-bold text-emerald-700">
+                    Investimento: R$ {selectedService.pricePromo.toFixed(2).replace(".", ",")} (
+                    {selectedService.installments}).
                   </div>
                 </div>
 
@@ -461,22 +473,22 @@ export default function NicheBookingForm({ niche, services }: NicheBookingProps)
                   <button
                     type="button"
                     onClick={() => setStep(1)}
-                    className="px-4 py-2 text-xs font-bold text-zinc-500 hover:text-zinc-800 flex items-center gap-1"
+                    className="flex items-center gap-1 px-4 py-2 text-xs font-bold text-zinc-500 hover:text-zinc-800"
                   >
-                    <ArrowLeft className="w-3.5 h-3.5" /> Voltar
+                    <ArrowLeft className="h-3.5 w-3.5" /> Voltar
                   </button>
 
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="px-6 py-2.5 bg-[#FFC107] hover:bg-[#ffb300] text-black font-extrabold text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-[#FFC107] px-6 py-2.5 text-xs font-extrabold text-black shadow-md transition-all hover:bg-[#ffb300] active:scale-95 disabled:opacity-50"
                   >
                     {isSubmitting ? (
                       <span>Registrando no CRM...</span>
                     ) : (
                       <>
-                        <span>Finalizar & Abrir WhatsApp</span>
-                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        <span>Enviar solicitação</span>
+                        <Check className="h-3.5 w-3.5 stroke-[3]" />
                       </>
                     )}
                   </button>
@@ -486,51 +498,51 @@ export default function NicheBookingForm({ niche, services }: NicheBookingProps)
 
             {/* PASSO 3: SUCESSO E ABERTURA DO WHATSAPP */}
             {step === 3 && (
-              <div className="text-center py-6 space-y-4 animate-in zoom-in-95 duration-200">
-                <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-sm">
-                  <CheckCircle2 className="w-9 h-9 stroke-[2.5]" />
+              <div className="animate-in zoom-in-95 space-y-4 py-6 text-center duration-200">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 shadow-sm">
+                  <CheckCircle2 className="h-9 w-9 stroke-[2.5]" />
                 </div>
 
                 <div className="space-y-1">
                   <h4 className="text-lg font-black text-zinc-950">
-                    Agendamento Registrado com Sucesso!
+                    Solicitação recebida! Aguarde a confirmação.
                   </h4>
-                  <p className="text-xs text-zinc-500 max-w-sm mx-auto">
+                  <p className="mx-auto max-w-sm text-xs text-zinc-500">
                     Muito obrigado, <strong>{name}</strong>! Seu pedido para{" "}
                     <strong>{selectedService.title}</strong> já foi salvo no CRM da Thyná.
                   </p>
                 </div>
 
-                <div className="p-4 bg-zinc-50 border border-zinc-200/80 rounded-2xl max-w-md mx-auto text-left text-xs space-y-2">
+                <div className="mx-auto max-w-md space-y-2 rounded-2xl border border-zinc-200/80 bg-zinc-50 p-4 text-left text-xs">
                   <div className="flex items-center justify-between">
-                    <span className="text-zinc-400 font-semibold">Horário:</span>
+                    <span className="font-semibold text-zinc-400">Horário:</span>
                     <span className="font-extrabold text-emerald-700">
                       {selectedDayObj?.weekday}, {selectedDayObj?.dayNumber} de{" "}
                       {selectedDayObj?.monthName} às {selectedTime}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-zinc-400 font-semibold">Valor com Desconto:</span>
+                    <span className="font-semibold text-zinc-400">Valor com Desconto:</span>
                     <span className="font-bold text-zinc-900">
                       R$ {selectedService.pricePromo.toFixed(2).replace(".", ",")} (
                       {selectedService.installments})
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-zinc-400 font-semibold">WhatsApp Informado:</span>
+                    <span className="font-semibold text-zinc-400">WhatsApp Informado:</span>
                     <span className="font-mono text-zinc-800">{phone}</span>
                   </div>
                 </div>
 
-                <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2">
+                <div className="flex flex-col items-center justify-center gap-2 pt-2 sm:flex-row">
                   {whatsappUrl && (
                     <a
                       href={whatsappUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-full sm:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-colors flex items-center justify-center gap-2"
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-xs font-extrabold text-white shadow-md transition-colors hover:bg-emerald-700 sm:w-auto"
                     >
-                      <MessageSquare className="w-4 h-4" />
+                      <MessageSquare className="h-4 w-4" />
                       <span>Falar com a Thyná no WhatsApp</span>
                     </a>
                   )}
@@ -540,7 +552,7 @@ export default function NicheBookingForm({ niche, services }: NicheBookingProps)
                       setSelectedService(null);
                       setStep(1);
                     }}
-                    className="w-full sm:w-auto px-4 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                    className="w-full cursor-pointer rounded-xl bg-zinc-100 px-4 py-3 text-xs font-bold text-zinc-700 transition-colors hover:bg-zinc-200 sm:w-auto"
                   >
                     Concluir
                   </button>
@@ -553,4 +565,3 @@ export default function NicheBookingForm({ niche, services }: NicheBookingProps)
     </div>
   );
 }
-

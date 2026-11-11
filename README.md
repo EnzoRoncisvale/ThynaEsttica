@@ -1,4 +1,4 @@
-# 🚀 CRM Sem VPS — Versão Serverless & Web
+# 🌸 Thyná Estética — Landing Page & CRM Sem VPS
 
 Esta é a versão do CRM adaptada para rodar como um **site normal**, sem a necessidade de manter uma VPS (Virtual Private Server) ou gerenciar contêineres Docker (como WAHA, Caddy, Traefik ou workers em daemon).
 

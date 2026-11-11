@@ -100,13 +100,6 @@ export default function EsteticaPage() {
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-xs font-bold text-zinc-800">Agenda Aberta</span>
           </div>
-
-          <Link
-            href="/login"
-            className="px-3.5 py-1.5 text-xs font-bold bg-[#111111] text-white hover:bg-black rounded-xl transition-all shadow-xs"
-          >
-            Acesso Equipe →
-          </Link>
         </div>
       </header>
 
