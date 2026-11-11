@@ -1,18 +1,5 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "crons": [
-    {
-      "path": "/api/v1/cron/event-log-drain",
-      "schedule": "* * * * *"
-    },
-    {
-      "path": "/api/v1/cron/agent-dispatcher",
-      "schedule": "* * * * *"
-    },
-    {
-      "path": "/api/v1/cron/followup-flow-worker",
-      "schedule": "*/5 * * * *"
-    }
-  ]
+  "$schema": "https://openapi.vercel.sh/vercel.json"
 }
+
 
